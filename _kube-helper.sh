@@ -32,6 +32,7 @@ generate_yaml() {
     local YAML_OUTPUT=""
     local FULL_ITEM=$(get_full_item $ITEM_ID)
     local ITEM_TITLE=$(echo $FULL_ITEM | jq -r '.title')
+    local VAULT_NAME=$(echo $FULL_ITEM | jq -r '.vault.name')
     echo "Generating kubeconfig for ${ITEM_TITLE} ($ITEM_ID)..."
     mkdir -p ${KUBECONFIG_FOLDER}
     local FULL_KUBECONFIG=$(get_item_field "full_kubeconfig" "$FULL_ITEM")
@@ -43,7 +44,9 @@ generate_yaml() {
     if [[ ${FULL_KUBECONFIG} != "" ]]; then
         # Save full_kubeconfig to a file in the ~/.kube/ directory
         echo "Full kubeconfig for $ITEM_TITLE found."
-        YAML_OUTPUT=${FULL_KUBECONFIG}
+        # YAML_OUTPUT=${FULL_KUBECONFIG}
+        # echo op read "op://${VAULT_NAME}/${ITEM_TITLE}/full_kubeconfig"
+        YAML_OUTPUT=$(op read "op://${VAULT_NAME}/${ITEM_TITLE}/full_kubeconfig")
     else
         echo "Full kubeconfig for $ITEM_TITLE not found. Generating kubeconfig..."
       local SERVER=$(get_item_field "server" "$FULL_ITEM")
@@ -88,11 +91,10 @@ users:
 EOF
     )
     fi
-    echo ------------------------------------------------------- ${CONTEXT_NAME} -------------------------------------------------------
-    printf "${YAML_OUTPUT}"
-    # printf "${YAML_OUTPUT}" > ${KUBECONFIG_FOLDER}/${CONTEXT_NAME}.yaml
-    printf "%s" "${YAML_OUTPUT}" > ${KUBECONFIG_FOLDER}/${CONTEXT_NAME}.yaml.
-    echo -e "\n-------------------------------------------------------------------------------------------------------------------------------"
+    # echo ------------------------------------------------------- ${CONTEXT_NAME} -------------------------------------------------------
+    # printf "%s" "${YAML_OUTPUT}"
+    printf "%s" "${YAML_OUTPUT}" > ${KUBECONFIG_FOLDER}/${CONTEXT_NAME}.yaml
+    # echo -e "\n-------------------------------------------------------------------------------------------------------------------------------"
 }
 
 # Check script arguments
@@ -100,7 +102,6 @@ if [[ "$1" == "prep-contexts" ]]; then
     kubeconfig_files=()
     mkdir -p ${KUBECONFIG_FOLDER}
     echo "Preparing kubeconfig files..."
-    echo "Current kubeconfig files: $kubeconfig_files"
     ALL_ITEMS=$(list_kube_cred_items)
     for ITEM_ID in $ALL_ITEMS; do
         generate_yaml "$ITEM_ID"
