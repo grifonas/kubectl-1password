@@ -116,21 +116,17 @@ if [[ "$1" == "prep-contexts" ]]; then
     exit 0
 fi
 
-# Default values for parameters
-vault=""
-item_name=""
-
 # Parse script arguments
 while [[ "$#" -gt 0 ]]; do
     case $1 in
-        --item-id) item_id="$2"; shift ;;
+        --item-id) ITEM_ID="$2"; shift ;;
         *) echo "Unknown parameter passed: $1"; exit 1 ;;
     esac
     shift
 done
 
 # Check if required parameters are provided
-if [[ -z "$item_id" ]]; then
+if [[ -z "$ITEM_ID" ]]; then
     echo "Usage: $0 --item-id [ITEM ID]"
     exit 1
 fi
@@ -138,9 +134,9 @@ fi
 # Construct the paths for client certificate and key data
 FULL_ITEM=$(get_full_item $ITEM_ID)
 # Retrieve the client certificate data
-clientCertificateData=$(get_item_field "client_certificate_path" "$FULL_ITEM")
+clientCertificateData=$(get_item_field "client-certificate-data" "$FULL_ITEM")
 # Retrieve the client key data
-clientKeyData=$(get_item_field "client_key_path" "$FULL_ITEM")
+clientKeyData=$(get_item_field "client-key-data" "$FULL_ITEM")
 
 # Base64 decode the retrieved values and escape newline characters
 decodedClientCertificateData=$(echo "$clientCertificateData" | base64 --decode | awk '{printf "%s\\n", $0}')
