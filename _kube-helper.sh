@@ -9,10 +9,12 @@ script_path=$(realpath "$0")
 function list_kube_cred_items(){
   op item list --tags ${KUBECONFIG_CRED_ITEM_TAG} | awk '{print $1}' | grep -v ID
 }
+
 function get_full_item() {
   local ITEM_ID="$1"
   op item get ${ITEM_ID} --format json
 }
+
 function get_item_field() {
   local FIELD_LABEL="$1"
   local FULL_ITEM="$2"
@@ -23,52 +25,38 @@ function get_item_field() {
   fi
   echo $FIELD_VALUE
 }
-# for ITEM_ID in $(list_kube_cred_items); do
-#   FULL_ITEM=$(get_full_item $ITEM_ID)
-#   ITEM_TITLE=$(echo $FULL_ITEM | jq -r '.title')
-#   CONTEXT_NAME=$(get_item_field "context-name" "$FULL_ITEM")
-#   SERVER=$(get_item_field "server" "$FULL_ITEM")
-#   CERTIFICATE_AUTHORITY_DATA=$(get_item_field "certificate-authority-data" "$FULL_ITEM")
-#   NAMESPACE=$(get_item_field "default_namespace" "$FULL_ITEM")
-#   if [[ $? != "0" ]]; then
-#     echo "The item $ITEM_TITLE does not have a default_namespace set. Using 'default' namespace."
-#     NAMESPACE="default"
-#   fi
-#   echo ITEN_TITLE: $ITEM_TITLE
-#   echo CONTEXT_NAME: $CONTEXT_NAME
-#   echo SERVER: $SERVER
-#   echo CERTIFICATE_AUTHORITY_DATA: $CERTIFICATE_AUTHORITY_DATA
-#   echo NAMESPACE: $NAMESPACE
-# done
-# exit 0
+
 # Function to generate YAML and save to a file
 generate_yaml() {
     local ITEM_ID="$1"
+    local YAML_OUTPUT=""
     local FULL_ITEM=$(get_full_item $ITEM_ID)
     local ITEM_TITLE=$(echo $FULL_ITEM | jq -r '.title')
     echo "Generating kubeconfig for ${ITEM_TITLE} ($ITEM_ID)..."
     mkdir -p ${KUBECONFIG_FOLDER}
     local FULL_KUBECONFIG=$(get_item_field "full_kubeconfig" "$FULL_ITEM")
-    # echo "FULL_KUBECONFIG: $FULL_KUBECONFIG"
+
+    CONTEXT_NAME=$(get_item_field "context-name" "$FULL_ITEM")
+    if [[ $? != "0" ]]; then
+      CONTEXT_NAME=$ITEM_TITLE
+    fi
     if [[ ${FULL_KUBECONFIG} != "" ]]; then
         # Save full_kubeconfig to a file in the ~/.kube/ directory
-        echo "$FULL_KUBECONFIG" > ${KUBECONFIG_FOLDER}/${CONTEXT_NAME}.yaml
-        echo "Full kubeconfig for $ITEM_TITLE found and saved."
-        return
-    fi
-    local ITEM_TITLE=$(echo $FULL_ITEM | jq -r '.title')
-    local SERVER=$(get_item_field "server" "$FULL_ITEM")
-    local CERTIFICATE_AUTHORITY_DATA=$(get_item_field "certificate-authority-data" "$FULL_ITEM")
-    local NAMESPACE=$(get_item_field "default_namespace" "$FULL_ITEM")
-    if [[ $? != "0" ]]; then
-      echo "The item $ITEM_TITLE does not have a default_namespace set. Using 'default' namespace."
-      NAMESPACE="default"
-    fi
-    # This var. should be global cause it's used outside of this function:
-    CONTEXT_NAME=$(get_item_field "context-name" "$FULL_ITEM")
+        echo "Full kubeconfig for $ITEM_TITLE found."
+        YAML_OUTPUT=${FULL_KUBECONFIG}
+    else
+        echo "Full kubeconfig for $ITEM_TITLE not found. Generating kubeconfig..."
+      local SERVER=$(get_item_field "server" "$FULL_ITEM")
+      local CERTIFICATE_AUTHORITY_DATA=$(get_item_field "certificate-authority-data" "$FULL_ITEM")
+      local NAMESPACE=$(get_item_field "default_namespace" "$FULL_ITEM")
+      if [[ $? != "0" ]]; then
+        echo "The item $ITEM_TITLE does not have a default_namespace set. Using 'default' namespace."
+        NAMESPACE="default"
+      fi
+
 
     # Proceed with the original YAML generation if "full_kubeconfig" is not present
-    yaml_output=$(cat <<EOF
+    YAML_OUTPUT=$(cat <<EOF
 apiVersion: v1
 clusters:
 - cluster:
@@ -99,29 +87,25 @@ users:
       interactiveMode: Never
 EOF
     )
-
-    # Save YAML to a file in the ~/.kube/ directory
-    mkdir -p ~/.kube
-    echo "$yaml_output"
-    echo "$yaml_output" > ${KUBECONFIG_FOLDER}/${context_name}.yaml
+    fi
+    echo ------------------------------------------------------- ${CONTEXT_NAME} -------------------------------------------------------
+    printf "${YAML_OUTPUT}"
+    # printf "${YAML_OUTPUT}" > ${KUBECONFIG_FOLDER}/${CONTEXT_NAME}.yaml
+    printf "%s" "${YAML_OUTPUT}" > ${KUBECONFIG_FOLDER}/${CONTEXT_NAME}.yaml.
+    echo -e "\n-------------------------------------------------------------------------------------------------------------------------------"
 }
 
 # Check script arguments
 if [[ "$1" == "prep-contexts" ]]; then
     kubeconfig_files=()
+    mkdir -p ${KUBECONFIG_FOLDER}
+    echo "Preparing kubeconfig files..."
+    echo "Current kubeconfig files: $kubeconfig_files"
     ALL_ITEMS=$(list_kube_cred_items)
     for ITEM_ID in $ALL_ITEMS; do
         generate_yaml "$ITEM_ID"
         kubeconfig_files+=("${KUBECONFIG_FOLDER}/${CONTEXT_NAME}.yaml")
     done
-
-    # while IFS= read -r line; do
-    #     vault=$(echo $line | awk '{print $1}')
-    #     item_name=$(echo $line | awk '{print $2}')
-    #     echo -e "\nGenerating kubeconfig for $item_name in vault ${vault}..."
-    #     generate_yaml "$vault" "$item_name"
-    #     kubeconfig_files+=("${KUBECONFIG_FOLDER}/${context_name}.yaml")
-    # done <<< "$items"
 
     # Export KUBECONFIG variable
     export KUBECONFIG=$(IFS=:; echo "${kubeconfig_files[*]}")
@@ -152,7 +136,6 @@ if [[ -z "$item_id" ]]; then
 fi
 
 # Construct the paths for client certificate and key data
-# client_certificate_path="op://$vault/$item_name/client-certificate-data"
 FULL_ITEM=$(get_full_item $ITEM_ID)
 # Retrieve the client certificate data
 clientCertificateData=$(get_item_field "client_certificate_path" "$FULL_ITEM")
