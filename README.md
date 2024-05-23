@@ -36,7 +36,7 @@ This bash script manages Kubernetes configurations stored in 1Password. It allow
 Run this commands to retrieve all kubeconfigs from 1Password tagged with `kubeconfig_cred_for_sourcing` tag:
 
 ```bash
-./script.sh prep-contexts
+./_kube-helper.sh prep-contexts
 ```
 This will take all the available kubeconfig items in 1Password and prepare your contexts.
 
