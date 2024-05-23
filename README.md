@@ -1,6 +1,11 @@
 # Kubernetes Configuration Manager
 
-This bash script manages Kubernetes configurations stored in 1Password. It allows you to generate and merge kubeconfig files for different contexts.
+This bash script allows you to store your kubeconfig contexts in 1Password.
+
+The script does two things: 
+
+1. Manages your `~/.kube/config` based on 1Password items
+2. Retrives the credentials on the fly every time you use `kubectl`
 
 ## Prerequisites
 
