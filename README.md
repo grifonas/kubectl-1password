@@ -26,7 +26,7 @@ This bash script manages Kubernetes configurations stored in 1Password. It allow
 
 ### Additional Requirements
 
-- The 1Password item should have a tag named `kubeconfig_cred_for_sourcing` to be recognized by the script.
+- The 1Password item should have a tag named `kubeconfig_cred_for_sourcing` to be recognised by the script.
 
 
 ## Usage
