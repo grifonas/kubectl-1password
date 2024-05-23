@@ -33,7 +33,7 @@ generate_yaml() {
     local FULL_ITEM=$(get_full_item $ITEM_ID)
     local ITEM_TITLE=$(echo $FULL_ITEM | jq -r '.title')
     local VAULT_NAME=$(echo $FULL_ITEM | jq -r '.vault.name')
-    echo "Generating kubeconfig for ${ITEM_TITLE} ($ITEM_ID)..."
+    echo "Prepping kubeconfig for ${ITEM_TITLE} ($ITEM_ID)..."
     mkdir -p ${KUBECONFIG_FOLDER}
     local FULL_KUBECONFIG=$(get_item_field "full_kubeconfig" "$FULL_ITEM")
 
@@ -48,7 +48,7 @@ generate_yaml() {
         # echo op read "op://${VAULT_NAME}/${ITEM_TITLE}/full_kubeconfig"
         YAML_OUTPUT=$(op read "op://${VAULT_NAME}/${ITEM_TITLE}/full_kubeconfig")
     else
-        echo "Full kubeconfig for $ITEM_TITLE not found. Generating kubeconfig..."
+      echo "Generating kubeconfig for $ITEM_TITLE..."
       local SERVER=$(get_item_field "server" "$FULL_ITEM")
       local CERTIFICATE_AUTHORITY_DATA=$(get_item_field "certificate-authority-data" "$FULL_ITEM")
       local NAMESPACE=$(get_item_field "default_namespace" "$FULL_ITEM")
@@ -85,7 +85,8 @@ users:
       - "--item-id"
       - "$ITEM_ID"
       installHint: |
-        kubectl-1password-exec.sh is required
+        github.com/grifonas/kubectl-1password helper script is required to authenticate to the Kubernetes cluster.
+        The script is used to manage your kubeconfig contexts.
       provideClusterInfo: true
       interactiveMode: Never
 EOF
@@ -110,10 +111,16 @@ if [[ "$1" == "prep-contexts" ]]; then
 
     # Export KUBECONFIG variable
     export KUBECONFIG=$(IFS=:; echo "${kubeconfig_files[*]}")
-    echo "KUBECONFIG=$KUBECONFIG"
+    # echo "KUBECONFIG=$KUBECONFIG"
     # Merge the kubeconfig files into a single file
-    kubectl config view --merge --flatten > ${KUBECONFIG_FOLDER}/merged_kubeconfig.yaml
-    echo "Merged kubeconfig saved to ${KUBECONFIG_FOLDER}/merged_kubeconfig.yaml"
+    # backup current kube/config:
+    cp ${KUBECONFIG_FOLDER}/config ${KUBECONFIG_FOLDER}/config-$(date +%Y-%m-%d-%s).bak
+    MERGED_PATH=${KUBECONFIG_FOLDER}/config
+    kubectl config view --merge --flatten > ${MERGED_PATH}
+
+    echo "Merged kubeconfig saved to ${MERGED_PATH}"
+    # cleanup temp files:
+    rm -f ${KUBECONFIG_FOLDER}/*.yaml
     exit 0
 fi
 
