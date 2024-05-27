@@ -7,6 +7,12 @@ The script does two things:
 1. Manages your `~/.kube/config` based on 1Password items
 2. Retrives the credentials on the fly every time you use `kubectl`
 
+## TL;DR
+
+- Pop the script somewhere on your file system. Doesn't have to be in your `PATH`. 
+- Run `./_kube-helper.sh prep-contexts`. This will backup your current kubeconfig and create a new one based on your 1Password items.
+- Use `kubectl` as you normaly would. The creds are going to bretrieved on the fly from 1password.
+
 ## Prerequisites
 
 ## Tools
